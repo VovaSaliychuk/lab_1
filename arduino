@@ -1,0 +1,88 @@
+#include <DallasTemperature.h>
+#include <SFE_BMP180.h>
+#include <OneWire.h>
+#include <SoftwareSerial.h>
+#include <Time.h>
+
+#define ONE_WIRE_BUS 2
+
+SFE_BMP180 pressure;
+
+unsigned long last_time;
+int gRxPin = 10;
+int gTxPin = 11;
+
+bool ledState = false;
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+SoftwareSerial BTSerial(gRxPin, gTxPin);
+
+void setup() {
+  BTSerial.begin(9600);
+  Serial.begin(9600);
+  delay(500);
+  pinMode(13,OUTPUT);
+   sensors.begin();
+   pressure.begin();
+}
+
+void loop() {
+     double P;
+  if (BTSerial.available()) {
+    int c = BTSerial.read();
+    if(c == 1) 
+    {
+      digitalWrite(13, 1);
+      ledState = true;
+    }
+    else if(c == 0)                                                       //LED
+    {
+      digitalWrite(13, 0); 
+      ledState = false;                      
+    }
+    Serial.print("Read " + (String)(c));
+  }
+
+
+  //BTSerial.write((int)ledState);
+ 
+  BTSerial.print(/*(String)(ledState)+*/"Test1;Test2;");
+  Serial.println(ledState); 
+  delay(50);
+  
+if(millis()-last_time > 5000){
+  last_time = millis();
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  Serial.print("Temperature = ");                                              //TEMPERATURE
+  Serial.println(sensors.getTempCByIndex(0));  
+
+ P = getPressure();
+    Serial.print("Pressure = ");                                                    //PRESSURE
+    Serial.println(P, 4); 
+  
+}
+ 
+}
+double getPressure(){
+    char status;
+    double T,P,p0,a;
+
+    status = pressure.startTemperature();
+    if (status != 0){
+        // ожидание замера температуры
+        delay(status);
+        status = pressure.getTemperature(T);
+        if (status != 0){
+            status = pressure.startPressure(3);
+            if (status != 0){
+                // ожидание замера давления
+                delay(status);
+                status = pressure.getPressure(P,T);
+                if (status != 0){
+                    return(P);
+                }
+            }
+        }
+    }
+}
